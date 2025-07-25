@@ -272,11 +272,11 @@ mod tests {
     // Mock physical memory environment - ensure alignment
     const MEMORY_SIZE: usize = 0x10000; // 64KB
     const MEMORY_START_PADDR: usize = 0x1000;
-    
+
     // Use #[repr(align(4096))] to ensure 4KB alignment
     #[repr(align(4096))]
     struct AlignedMemory([u8; MEMORY_SIZE]);
-    
+
     static mut MOCK_MEMORY: AlignedMemory = AlignedMemory([0; MEMORY_SIZE]);
     // Mock physical frame allocator state
     static NEXT_PADDR: AtomicUsize = AtomicUsize::new(MEMORY_START_PADDR);
@@ -304,9 +304,10 @@ mod tests {
             let paddr_usize = paddr.as_usize();
             assert!(
                 paddr_usize >= MEMORY_START_PADDR && paddr_usize < MEMORY_START_PADDR + MEMORY_SIZE,
-                "Physical address {:#x} out of bounds", paddr_usize
+                "Physical address {:#x} out of bounds",
+                paddr_usize
             );
-            
+
             let offset = paddr_usize - MEMORY_START_PADDR;
             unsafe {
                 let base_ptr = core::ptr::addr_of_mut!(MOCK_MEMORY.0).cast::<u8>();
@@ -365,7 +366,7 @@ mod tests {
         // Partially out of range
         assert!(!addr_space.contains_range(base + 0x3000, 0x2000));
     }
-    
+
     // This test is temporarily disabled because flush_tlb is not implemented for x86.
     #[ignore]
     #[test]
@@ -383,7 +384,10 @@ mod tests {
         addr_space.map_linear(vaddr, paddr, size, flags).unwrap();
 
         assert_eq!(addr_space.translate(vaddr).unwrap(), paddr);
-        assert_eq!(addr_space.translate(vaddr + 0x1000).unwrap(), paddr + 0x1000);
+        assert_eq!(
+            addr_space.translate(vaddr + 0x1000).unwrap(),
+            paddr + 0x1000
+        );
     }
 
     #[test]
@@ -410,10 +414,16 @@ mod tests {
         // Verify mappings exist and addresses are valid
         let paddr1 = addr_space.translate(vaddr).unwrap();
         let paddr2 = addr_space.translate(vaddr + 0x1000).unwrap();
-        
+
         // Verify physical addresses are within valid range
-        assert!(paddr1.as_usize() >= MEMORY_START_PADDR && paddr1.as_usize() < MEMORY_START_PADDR + MEMORY_SIZE);
-        assert!(paddr2.as_usize() >= MEMORY_START_PADDR && paddr2.as_usize() < MEMORY_START_PADDR + MEMORY_SIZE);
+        assert!(
+            paddr1.as_usize() >= MEMORY_START_PADDR
+                && paddr1.as_usize() < MEMORY_START_PADDR + MEMORY_SIZE
+        );
+        assert!(
+            paddr2.as_usize() >= MEMORY_START_PADDR
+                && paddr2.as_usize() < MEMORY_START_PADDR + MEMORY_SIZE
+        );
 
         // Verify two pages have different physical addresses
         assert_ne!(paddr1, paddr2);
@@ -532,7 +542,7 @@ mod tests {
         let after_clear_deallocs = DEALLOC_COUNT.load(Ordering::SeqCst);
         assert!(after_clear_deallocs > before_clear_deallocs);
     }
-    
+
     #[test]
     fn test_translate() {
         let _guard = TEST_MUTEX.lock();
@@ -589,18 +599,28 @@ mod tests {
             }
 
             // Verify data write was successful
-            let verify_buffer = addr_space.translated_byte_buffer(vaddr, test_bytes.len()).unwrap();
+            let verify_buffer = addr_space
+                .translated_byte_buffer(vaddr, test_bytes.len())
+                .unwrap();
             for (i, &expected) in test_bytes.iter().enumerate() {
                 assert_eq!(verify_buffer[0][i], expected);
             }
         }
 
         // Verify exceeding area size returns None
-        assert!(addr_space.translated_byte_buffer(vaddr, size + 0x1000).is_none());
+        assert!(
+            addr_space
+                .translated_byte_buffer(vaddr, size + 0x1000)
+                .is_none()
+        );
 
         // Verify unmapped address returns None
         let unmapped_vaddr = GuestPhysAddr::from_usize(0x1D000);
-        assert!(addr_space.translated_byte_buffer(unmapped_vaddr, 0x100).is_none());
+        assert!(
+            addr_space
+                .translated_byte_buffer(unmapped_vaddr, 0x100)
+                .is_none()
+        );
     }
 
     #[test]
@@ -620,7 +640,10 @@ mod tests {
         let result = addr_space.translate_and_get_limit(vaddr);
         assert!(result.is_some());
         let (paddr, area_size) = result.unwrap();
-        assert!(paddr.as_usize() >= MEMORY_START_PADDR && paddr.as_usize() < MEMORY_START_PADDR + MEMORY_SIZE);
+        assert!(
+            paddr.as_usize() >= MEMORY_START_PADDR
+                && paddr.as_usize() < MEMORY_START_PADDR + MEMORY_SIZE
+        );
         assert_eq!(area_size, size);
 
         // Verify unmapped address returns None
